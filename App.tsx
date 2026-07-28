@@ -1,13 +1,55 @@
+import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { HomeScreen } from './src/screens';
+import { notificationService } from './src/services';
 
 export default function App() {
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    initializeApp();
+  }, []);
+
+  const initializeApp = async () => {
+    try {
+      // Initialize notification service
+      await notificationService.initialize();
+      
+      // Schedule default reminders
+      await notificationService.scheduleWaterReminder(2);
+      
+      setIsLoading(false);
+    } catch (err) {
+      console.error('Error initializing app:', err);
+      setError('Erro ao inicializar o aplicativo');
+      setIsLoading(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#6366f1" />
+        <Text style={styles.loadingText}>Carregando...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorEmoji}>⚠️</Text>
+        <Text style={styles.errorText}>{error}</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Real Life Track 3.0 🚀</Text>
-      <Text style={styles.subtitle}>O app de saúde mais completo do Brasil</Text>
-      <Text style={styles.status}>Estrutura base criada com sucesso!</Text>
       <StatusBar style="auto" />
+      <HomeScreen />
     </View>
   );
 }
@@ -15,27 +57,33 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#6366f1',
+    backgroundColor: '#f8fafc',
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#64748b',
+  },
+  errorContainer: {
+    flex: 1,
+    backgroundColor: '#fef2f2',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
   },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 10,
-    textAlign: 'center',
+  errorEmoji: {
+    fontSize: 48,
+    marginBottom: 16,
   },
-  subtitle: {
-    fontSize: 18,
-    color: 'rgba(255,255,255,0.8)',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  status: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.6)',
+  errorText: {
+    fontSize: 16,
+    color: '#dc2626',
     textAlign: 'center',
   },
 });
