@@ -13,7 +13,6 @@ import com.facebook.react.config.ReactFeatureFlags
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.load
 import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
 import com.facebook.react.defaults.DefaultReactNativeHost
-import com.facebook.react.flipper.ReactNativeFlipper
 import com.facebook.soloader.SoLoader
 
 import expo.modules.ApplicationLifecycleDispatcher
@@ -30,7 +29,7 @@ class MainApplication : Application(), ReactApplication {
             return PackageList(this).packages
           }
 
-          override fun getJSMainModuleName(): String = ".expo/.virtual-metro-entry"
+          override fun getJSMainModuleName(): String = "index"
 
           override fun getUseDeveloperSupport(): Boolean = BuildConfig.DEBUG
 
@@ -52,8 +51,8 @@ class MainApplication : Application(), ReactApplication {
       // If you opted-in for the New Architecture, we load the native entry point for this app.
       load()
     }
-    if (BuildConfig.DEBUG) {
-      ReactNativeFlipper.initializeFlipper(this, reactNativeHost.reactInstanceManager)
+    if (BuildConfig.DEBUG && BuildConfig.IS_NEW_ARCHITECTURE_ENABLED) {
+      // Flipper initialization removed for standalone APK
     }
     ApplicationLifecycleDispatcher.onApplicationCreate(this)
   }

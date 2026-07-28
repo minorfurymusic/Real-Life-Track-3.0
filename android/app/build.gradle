@@ -163,7 +163,7 @@ dependencies {
         }
     }
 
-    implementation("com.facebook.react:flipper-integration")
+    // Flipper removed for standalone APK
 
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")
