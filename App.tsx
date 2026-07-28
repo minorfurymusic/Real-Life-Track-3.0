@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { HomeScreen } from './src/screens';
 import { notificationService } from './src/services';
+import { AppProvider } from './src/context';
 
 export default function App() {
   const [isLoading, setIsLoading] = useState(true);
@@ -47,10 +48,12 @@ export default function App() {
   }
 
   return (
-    <View style={styles.container}>
-      <StatusBar style="auto" />
-      <HomeScreen />
-    </View>
+    <AppProvider>
+      <View style={styles.container}>
+        <StatusBar style="auto" />
+        <HomeScreen />
+      </View>
+    </AppProvider>
   );
 }
 
