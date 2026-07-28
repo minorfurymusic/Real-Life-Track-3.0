@@ -9,6 +9,9 @@ Notifications.setNotificationHandler({
   }),
 });
 
+// Type alias for compatibility
+type EventSubscription = Notifications.Subscription;
+
 class NotificationService {
   private permissionGranted: boolean = false;
 
@@ -71,9 +74,8 @@ class NotificationService {
             data: { type: 'water_reminder' },
           },
           trigger: {
-            type: Notifications.SchedulableTriggerInputTypes.DATE,
             date: triggerDate,
-          } as any,
+          },
         });
         notificationIds.push(id);
       }
@@ -90,12 +92,11 @@ class NotificationService {
 
     const id = await Notifications.scheduleNotificationAsync({
       content: {
-        title: '💊 Hora de tomar medicationName!',
+        title: '💊 Hora de tomar medicamento!',
         body: `Está na hora de tomar ${medicationName}`,
         data: { type: 'medication_reminder' },
       },
       trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.DATE,
         date: time,
       },
     });
@@ -116,9 +117,8 @@ class NotificationService {
         data: { type: 'sleep_reminder' },
       },
       trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.DATE,
         date: triggerTime,
-      } as any,
+      },
     });
 
     return id;
@@ -134,13 +134,13 @@ class NotificationService {
 
   addNotificationReceivedListener(
     callback: (notification: Notifications.Notification) => void
-  ): Notifications.EventSubscription {
+  ): EventSubscription {
     return Notifications.addNotificationReceivedListener(callback);
   }
 
   addNotificationResponseListener(
     callback: (response: Notifications.NotificationResponse) => void
-  ): Notifications.EventSubscription {
+  ): EventSubscription {
     return Notifications.addNotificationResponseReceivedListener(callback);
   }
 }

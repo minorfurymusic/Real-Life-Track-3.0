@@ -1,118 +1,132 @@
-import { Pedometer } from 'expo-sensors';
-import { Platform, PermissionsAndroid } from 'react-native';
+/**
+ * Step Counter Service - Serviço de contador de passos
+ * 
+ * Usa Google Fit History API para buscar dados de passos que são
+ * coletados pelo sistema Android mesmo com o app fechado.
+ * 
+ * IMPORTANTE: O Android mantém um histórico de passos através do
+ * sensor de movimento. O Google Fit sincroniza esses dados.
+ */
 
-export interface StepData {
-  date: string;
-  steps: number;
-}
+import { stepHistoryService, StepData } from './GoogleFitService';
 
 class StepCounterService {
   private isAvailable: boolean = false;
-  private subscription: any = null;
+  private isInitialized: boolean = false;
+  private liveUpdateCleanup: (() => void) | null = null;
 
   async initialize(): Promise<boolean> {
+    if (this.isInitialized) {
+      return this.isAvailable;
+    }
+
     try {
-      this.isAvailable = await Pedometer.isAvailableAsync();
+      console.log('[StepCounter] Inicializando Step History Service...');
+      this.isAvailable = await stepHistoryService.initialize();
+      this.isInitialized = true;
       
-      if (this.isAvailable && Platform.OS === 'android') {
-        const granted = await this.requestPermission();
-        this.isAvailable = granted;
-      }
+      console.log('[StepCounter] Step History disponível:', this.isAvailable);
       
       return this.isAvailable;
     } catch (error) {
-      console.error('Error initializing step counter:', error);
+      console.error('[StepCounter] Erro ao inicializar:', error);
+      this.isInitialized = true;
       return false;
     }
   }
 
-  private async requestPermission(): Promise<boolean> {
-    try {
-      if (Platform.OS === 'android') {
-        const granted = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.ACTIVITY_RECOGNITION,
-          {
-            title: 'Permissão de Atividade',
-            message: 'Real Life Track precisa acessar seus dados de atividade física.',
-            buttonNeutral: 'Perguntar depois',
-            buttonNegative: 'Cancelar',
-            buttonPositive: 'OK',
-          }
-        );
-        return granted === PermissionsAndroid.RESULTS.GRANTED;
-      }
-      return true;
-    } catch (error) {
-      console.error('Error requesting permission:', error);
-      return false;
-    }
-  }
-
+  /**
+   * Obtém os passos de HOJE
+   * 
+   * IMPORTANTE: Os dados são buscados do Google Fit/History API,
+   * que mantém os passos mesmo quando o app está fechado.
+   */
   async getTodaySteps(): Promise<number> {
-    if (!this.isAvailable) return 0;
-
-    try {
-      const end = new Date();
-      const start = new Date();
-      start.setHours(0, 0, 0, 0);
-
-      const result = await Pedometer.getStepCountAsync(start, end);
-      return result?.steps ?? 0;
-    } catch (error) {
-      console.error('Error getting today steps:', error);
+    if (!this.isAvailable) {
+      console.log('[StepCounter] Serviço não disponível');
       return 0;
     }
+
+    return await stepHistoryService.getTodaySteps();
   }
 
+  /**
+   * Obtém os passos da última semana
+   * 
+   * Funciona mesmo com app fechado porque busca do histórico
+   * do Google Fit (Android History API).
+   */
   async getWeeklySteps(): Promise<StepData[]> {
-    if (!this.isAvailable) return [];
-
-    try {
-      const end = new Date();
-      const start = new Date();
-      start.setDate(start.getDate() - 6);
-      start.setHours(0, 0, 0, 0);
-
-      const result = await Pedometer.getStepCountAsync(start, end);
-      const weeklyData: StepData[] = [];
-
-      for (let i = 0; i < 7; i++) {
-        const day = new Date(start);
-        day.setDate(day.getDate() + i);
-        weeklyData.push({
-          date: day.toISOString().split('T')[0],
-          steps: 0,
-        });
-      }
-
-      if (result) {
-        // Pedometer returns total steps, distribute evenly for demo
-        const avgSteps = Math.floor(result.steps / 7);
-        weeklyData.forEach(day => {
-          day.steps = avgSteps + Math.floor(Math.random() * 2000);
-        });
-      }
-
-      return weeklyData;
-    } catch (error) {
-      console.error('Error getting weekly steps:', error);
+    if (!this.isAvailable) {
+      console.log('[StepCounter] Serviço não disponível');
       return [];
     }
+
+    return await stepHistoryService.getWeeklySteps();
   }
 
+  /**
+   * Inicia observações em tempo real
+   * 
+   * ATENÇÃO: Esta função só funciona enquanto o app está aberto.
+   * Para tracking em background, os dados já estão no Google Fit.
+   */
   startLiveUpdates(callback: (steps: number) => void): void {
-    if (!this.isAvailable) return;
+    if (!this.isAvailable) {
+      console.log('[StepCounter] Não é possível iniciar - serviço não disponível');
+      return;
+    }
 
-    this.subscription = Pedometer.watchStepCount(result => {
-      callback(result.steps);
-    });
+    if (this.liveUpdateCleanup) {
+      this.liveUpdateCleanup();
+    }
+
+    console.log('[StepCounter] Iniciando updates em tempo real...');
+    this.liveUpdateCleanup = stepHistoryService.startLiveUpdates(callback);
   }
 
+  /**
+   * Para observações em tempo real
+   */
   stopLiveUpdates(): void {
-    if (this.subscription) {
-      this.subscription.remove();
-      this.subscription = null;
+    if (this.liveUpdateCleanup) {
+      this.liveUpdateCleanup();
+      this.liveUpdateCleanup = null;
+      console.log('[StepCounter] Updates em tempo real encerrados');
     }
+  }
+
+  /**
+   * Verifica se o Google Fit está disponível
+   */
+  isGoogleFitAvailable(): boolean {
+    return this.isAvailable;
+  }
+
+  /**
+   * Retorna mensagem motivacional
+   */
+  async getMotivationalMessage(): Promise<string> {
+    if (!this.isAvailable) {
+      return 'Inicie o app para começar a rastrear seus passos!';
+    }
+    return await stepHistoryService.getMotivationalMessage();
+  }
+
+  /**
+   * Calcula média de passos
+   */
+  async getAverageSteps(days: number = 7): Promise<number> {
+    if (!this.isAvailable) return 0;
+    return await stepHistoryService.getAverageSteps(days);
+  }
+
+  /**
+   * Verifica se a meta foi atingida
+   */
+  async isGoalReached(goal: number = 10000): Promise<boolean> {
+    if (!this.isAvailable) return false;
+    return await stepHistoryService.isGoalReached(goal);
   }
 }
 
