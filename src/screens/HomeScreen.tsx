@@ -19,6 +19,7 @@ import { MoodEntry } from '../types';
 
 interface HomeScreenProps {
   navigation?: any;
+  onLogout?: () => void;
 }
 
 const MOOD_OPTIONS: { emoji: string; mood: MoodEntry['mood'] }[] = [
@@ -29,7 +30,7 @@ const MOOD_OPTIONS: { emoji: string; mood: MoodEntry['mood'] }[] = [
   { emoji: '😴', mood: 'tired' },
 ];
 
-export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
+export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) => {
   const { state, addWater } = useApp();
   const { steps, isAvailable: stepsAvailable, isLoading: stepsLoading } = useSteps();
   const [selectedMood, setSelectedMood] = useState<MoodEntry['mood'] | null>(null);
@@ -53,6 +54,20 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     }
 
     Alert.alert(result.success ? 'Real Life Track' : 'Não entendi', result.message);
+  };
+
+  const handleAvatarPress = () => {
+    if (onLogout) {
+      Alert.alert(
+        'Sair',
+        'Deseja sair da conta de testes?',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Sair', style: 'destructive', onPress: onLogout },
+        ],
+        { cancelable: true }
+      );
+    }
   };
 
   const handleMoodSubmit = async () => {
@@ -88,7 +103,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             <Text style={styles.greeting}>{getGreeting()}! 👋</Text>
             <Text style={styles.date}>{formatDate(new Date())}</Text>
           </View>
-          <TouchableOpacity style={styles.avatar}>
+          <TouchableOpacity style={styles.avatar} onPress={handleAvatarPress}>
             <Text style={styles.avatarText}>JP</Text>
           </TouchableOpacity>
         </View>
